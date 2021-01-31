@@ -427,7 +427,12 @@ def random_motion_blur(image, list_of_kernel_sizes):
     :param list_of_kernel_sizes: a list of odd integers.
     :return: blurred image
     """
-    pass
+    rad_angle = np.random.uniform(0, np.pi)
+    rand_kernel_size = np.random.choice(list_of_kernel_sizes)
+    rand_blurred_im = add_motion_blur(image, rand_kernel_size, rad_angle)
+    rounded_blurred_im = np.divide(np.round(rand_blurred_im * 255), 255)
+    clipped_blurred_im = np.clip(rounded_blurred_im, 0, 1)
+    return clipped_blurred_im
 
 #@markdown ### 7.2.2 Training a Deblurring Model
 
