@@ -448,7 +448,15 @@ def learn_deblurring_model(deblur_num_res_blocks, quick_mode=False):
     :param quick_mode: is quick mode
     :return: the trained model
     """
-    pass
+    model = build_nn_model(16, 16, 32, deblur_num_res_blocks)
+    corruption_func = lambda image: random_motion_blur(image, [7])
+
+    if not quick_mode:
+        train_model(model, images_for_deblurring(), corruption_func, 100, 100, 10, 1000)
+    else:
+        train_model(model, images_for_deblurring(), corruption_func, 10, 3, 2, 30)
+
+    return model
 
 """##7.3 Image Super-resolution
 ### 7.3.1 Image Low-Resolution Corruption
