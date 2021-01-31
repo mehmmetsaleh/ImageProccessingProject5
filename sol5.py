@@ -416,7 +416,9 @@ def add_motion_blur(image, kernel_size, angle):
     :param angle: an angle in radians in the range [0, π).
     :return: blurred image
     """
-    pass
+    kernel_2d = motion_blur_kernel(kernel_size, angle)
+    blurred_im = convolve(image, kernel_2d)
+    return blurred_im
 
 def random_motion_blur(image, list_of_kernel_sizes):
     """
