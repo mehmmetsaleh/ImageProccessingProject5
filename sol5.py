@@ -376,7 +376,11 @@ def add_gaussian_noise(image, min_sigma, max_sigma):
     :param max_sigma: a non-negative scalar value larger than or equal to min_sigma, representing the maximal variance of the gaussian distribution
     :return: the corrupted image
     """
-    pass
+    rand_sigma = np.random.uniform(min_sigma, max_sigma)
+    zero_mean_arr = np.random.normal(0, rand_sigma, image.shape)
+    noised_im = image + zero_mean_arr  # bitwise array addition
+    noised_im = np.divide(np.round(noised_im * 255), 255)  # rounded
+    return np.clip(noised_im, 0, 1)
 
 #@markdown ### 7.1.2 Training a Denoising Mode
 
@@ -390,7 +394,15 @@ def learn_denoising_model(denoise_num_res_blocks, quick_mode=False):
     :param quick_mode: is quick mode
     :return: the trained model
     """
-    pass
+    model = build_nn_model(24, 24, 48, denoise_num_res_blocks)
+    corruption_func = lambda im: add_gaussian_noise(im, 0, 0.2)
+    if not quick_mode:
+        train_model(model, images_for_denoising(), corruption_func, 100, 100, 10, 1000)
+
+    else:
+        train_model(model, images_for_denoising(), corruption_func, 10, 3, 2, 30)
+
+    return model
 
 """## 7.2 Image Deblurring
 ### 7.2.1 Motion Blur
