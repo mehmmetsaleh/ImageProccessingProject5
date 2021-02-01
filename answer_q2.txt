@@ -1,1 +1,7 @@
-still didn't choose
+I noticed that the lower the patch_size is the lower the MSE loss
+, which means better resolution (choosen param value: 8).
+also increasing the number of channels yields better results
+because the model becomes richer, but too many channels makes the model over parametrized (choosen value: 40).
+regarding the super_resolution_num_res_blocks param, I chose something in between so that the model
+doesn't overfit (choosen value: 4)
+

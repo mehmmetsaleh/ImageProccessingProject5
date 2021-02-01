@@ -266,12 +266,13 @@ def load_dataset(filenames, batch_size, corruption_func, crop_size):
         source_batch = []
         target_batch = []
         for i in range(batch_size):
-            random_pick = random.choice(filenames)
+            random_pick = np.random.choice(filenames)
             if random_pick in filename_image_dic:
                 im_arr = filename_image_dic.get(random_pick)
             else:
                 im_arr = read_image(random_pick, 1)
                 filename_image_dic[random_pick] = im_arr
+
             row0 = np.random.randint(im_arr.shape[0] - (3 * crop_r))
             col0 = np.random.randint(im_arr.shape[1] - (3 * crop_c))
             cropped_im = im_arr[row0: row0 + (3 * crop_r), col0: col0 + 3 * (crop_c)]
@@ -281,16 +282,12 @@ def load_dataset(filenames, batch_size, corruption_func, crop_size):
             col0_new = np.random.randint(cropped_im.shape[1] - crop_c)
             cropped_im = cropped_im[row0_new: row0_new + crop_r, col0_new: col0_new + crop_c]
             corrupt_im = corrupt_im[row0_new: row0_new + crop_r, col0_new: col0_new + crop_c]
-            source_batch.append(corrupt_im - 0.5)
-            target_batch.append(cropped_im - 0.5)
+            corrupt_im -= 0.5
+            cropped_im -= 0.5
+            source_batch.append(corrupt_im[..., np.newaxis])
+            target_batch.append(cropped_im[..., np.newaxis])
 
         yield np.array(source_batch), np.array(target_batch)
-
-
-# def corruption_func(img):
-#     return (1-img)
-
-# batches = load_dataset(images_for_denoising(), 5, corruption_func, (4,4))
 
 """# 4 Neural Network Model"""
 
@@ -306,7 +303,7 @@ def resblock(input_tensor, num_channels):
     a = Conv2D(num_channels, (3, 3), padding='same')(input_tensor)
     b = Activation('relu')(a)
     c = Conv2D(num_channels, (3, 3), padding='same')(b)
-    d = Add()([input_tensor, c])
+    d = Add()([c, input_tensor])
     return Activation('relu')(d)
 
 
@@ -324,10 +321,11 @@ def build_nn_model(height, width, num_channels, num_res_blocks):
     a = Input(shape=(height, width, 1))
     b = Conv2D(num_channels, (3, 3), padding='same')(a)
     c = Activation('relu')(b)
+    m = c
     for i in range(num_res_blocks):
-        c = resblock(c, num_channels)
-    d = Conv2D(1, (3, 3), padding='same')(c)
-    e = Add()([a, d])
+        m = resblock(m, num_channels)
+    d = Conv2D(1, (3, 3), padding='same')(m)
+    e = Add()([d, a])
     return Model(inputs=a, outputs=e)
 
 
@@ -349,14 +347,16 @@ def train_model(model, images, corruption_func, batch_size, steps_per_epoch, num
 
     crop_size = model.input_shape[1:3]
     train_set_size = int(len(images) * 0.8)
+    print("number of images: " + str(len(images)))
     train_images = images[:train_set_size]
     valid_images = images[train_set_size:]
     train_generator = load_dataset(train_images, batch_size, corruption_func, crop_size)
     valid_generator = load_dataset(valid_images, batch_size, corruption_func, crop_size)
 
     model.compile(loss='mean_squared_error', optimizer=Adam(beta_2=0.9))
-    history = model.fit_generator(train_generator, epochs=num_epochs, steps_per_epoch=steps_per_epoch,
-                                  validation_data=valid_generator, validation_steps=num_valid_samples)
+    history = model.fit_generator(train_generator, epochs=num_epochs, use_multiprocessing=True,
+                                  steps_per_epoch=steps_per_epoch, validation_data=valid_generator,
+                                  validation_steps=num_valid_samples // batch_size + 1)
 
 
 """# 6 Image Restoration of Complete Images"""
@@ -377,12 +377,10 @@ def restore_image(corrupted_image, base_model):
     new_model.set_weights(base_model.get_weights())
 
     zero_avg_corr_image = corrupted_image - 0.5
-    # zero_avg_corr_image = zero_avg_corr_image[np.newaxis,...]
-    zero_avg_corrected_img = new_model.predict(np.expand_dims(zero_avg_corr_image, axis=0))[0].astype(np.float64)
-    # zero_avg_corrected_img = new_model.predict(zero_avg_corr_image[np.newaxis,...])[0]
-    # zero_avg_corrected_img = zero_avg_corrected_img[0].astype(np.float64)
-    corrected_img = zero_avg_corrected_img + 0.5
-    return np.clip(corrected_img, 0, 1)
+
+    zero_avg_corrected_img = new_model.predict(zero_avg_corr_image.reshape(1, h, w, 1))[0].astype(np.float64)
+    zero_avg_corrected_img = zero_avg_corrected_img + 0.5
+    return np.clip(zero_avg_corrected_img.reshape(h, w), 0, 1)
 
 
 """# 7 Application to Image Denoising and Deblurring
@@ -431,11 +429,21 @@ def learn_denoising_model(denoise_num_res_blocks, quick_mode=False):
     return model
 
 
-# model1 = learn_denoising_model(1,quick_mode=False)
-# model2 = learn_denoising_model(2,quick_mode=False)
-# model3 = learn_denoising_model(3,quick_mode=False)
-# model4 = learn_denoising_model(4,quick_mode=False)
-# model5 = learn_denoising_model(5,quick_mode=False)
+# model1 = learn_denoising_model(denoise_num_res_blocks, quick_mode=False)
+# print(model1.history.history['val_loss'])
+
+# names = images_for_denoising()
+# read_im = read_image(names[0], 1)
+# read_im = add_gaussian_noise(read_im, 0, 0.2)
+
+# print(read_im.shape)
+# restored_im = restore_image(read_im, model1)
+# print(restored_im.shape)
+# plt.figure(0)
+# plt.imshow(read_im, cmap="gray")
+# plt.figure(1)
+# plt.imshow(restored_im, cmap="gray")
+# plt.show()
 
 # loss_val1 = model1.history.history['val_loss']
 # loss_val2 = model2.history.history['val_loss']
@@ -513,6 +521,21 @@ def learn_deblurring_model(deblur_num_res_blocks, quick_mode=False):
     return model
 
 
+# deblurring_model = learn_deblurring_model(deblur_num_res_blocks, quick_mode=False)
+#
+# names = images_for_deblurring()
+# read_im = read_image(names[1], 1)
+# read_im = random_motion_blur(read_im, [3, 5, 7])
+
+# print(read_im.shape)
+# restored_im = restore_image(read_im, deblurring_model)
+# print(restored_im.shape)
+# plt.figure(0)
+# plt.imshow(read_im, cmap="gray")
+# plt.figure(1)
+# plt.imshow(restored_im, cmap="gray")
+# plt.show()
+
 # model1 = learn_deblurring_model(1,quick_mode=False)
 # model2 = learn_deblurring_model(2,quick_mode=False)
 # model3 = learn_deblurring_model(3,quick_mode=False)
@@ -554,19 +577,18 @@ def super_resolution_corruption(image):
 
     lower_res_im = zoom(image, 0.25, order=0)
     lower_res_im = zoom(lower_res_im, 4, order=0)
-    # lower_res_im = lower_res_im[:(lower_res_im.shape[1] // 0.25) * 0.25,:(lower_res_im.shape[0] // 0.25) * 0.25]
     return lower_res_im
 
 
 # @markdown ### 7.3.2 Training a Super Resolution Model
 
 
-super_resolution_num_res_blocks = 7  # @param {type:"slider", min:1, max:15, step:1}
+super_resolution_num_res_blocks = 4  # @param {type:"slider", min:1, max:15, step:1}
 batch_size = 65  # @param {type:"slider", min:1, max:128, step:16}
-steps_per_epoch = 2500  # @param {type:"slider", min:100, max:5000, step:100}
-num_epochs = 10  # @param {type:"slider", min:1, max:20, step:1}
-patch_size = 32  # @param {type:"slider", min:8, max:32, step:2}
-num_channels = 48  # @param {type:"slider", min:16, max:64, step:2}
+steps_per_epoch = 400  # @param {type:"slider", min:100, max:5000, step:100}
+num_epochs = 8  # @param {type:"slider", min:1, max:20, step:1}
+patch_size = 8  # @param {type:"slider", min:8, max:32, step:2}
+num_channels = 40  # @param {type:"slider", min:16, max:64, step:2}
 
 
 # @markdown **DON'T FORGET TO RUN THIS CELL AFTER YOU CHANGING THE VALUES!**
@@ -590,15 +612,23 @@ def learn_super_resolution_model(super_resolution_num_res_blocks, quick_mode=Fal
     return model
 
 
+# resolution_model = learn_super_resolution_model(super_resolution_num_res_blocks, quick_mode=False)
+
 # names = images_for_super_resolution()
-# read_im = read_image(names[1],1)
-# m = learn_super_resolution_model(super_resolution_num_res_blocks,quick_mode=True)
-# restored_im = restore_image(read_im,m)
-# plt.imshow(restored_im,cmap="gray")
+# read_im = read_image(names[2], 1)
+# read_im = super_resolution_corruption(read_im)
+
+# print(read_im.shape)
+# restored_im = restore_image(read_im, resolution_model)
+# print(restored_im.shape)
+# plt.figure(0)
+# plt.imshow(read_im, cmap="gray")
+# plt.figure(1)
+# plt.imshow(restored_im, cmap="gray")
 # plt.show()
 
 # @markdown **Question 1:** Give a short description of your implementation and explain why do you think it works and why is it a good method for training the SR task.
-Answer1 = "I used scipy.ndimage.zoom to with order=0 (nearest interpolation) to scale down the image and then I scaled it back up using the same function"  # @param {type:"string"}
+Answer1 = "I used scipy.ndimage.zoom to shrink the image (lowering its resolution by factor 4) and then expanding it back to same size (factor 4) with same factor  with order=0 (nearest interpolation) to scale down the image and then I scaled it back up using the same function"  # @param {type:"string"}
 with open(f'answer1.txt', 'w+') as fh:
     fh.write(Answer1)
 
@@ -622,7 +652,7 @@ You do not need to submit the function that generates these plots, you should ju
 """
 
 # @markdown **Question 3:** Describe the effect of increasing the residual blocks on its performance for each task, both quantitatively in terms of the plot you got and qualitatively in terms of the differences in the image outputs of each model.
-Answer3 = "when we use more res blocks the performance becomes better and error calculation gets lower"  # @param {type:"string"}
+Answer3 = "when we use more res blocks the performance becomes better and error gets lower"  # @param {type:"string"}
 with open(f'answer3.txt', 'w+') as fh:
     fh.write(Answer3)
 

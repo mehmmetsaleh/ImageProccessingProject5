@@ -1,1 +1,3 @@
-I used scipy.ndimage.zoom to with order=0 (nearest interpolation) to scale down the image and then I scaled it back up using the same function
+I used scipy.ndimage.zoom to shrink the image (lowering its resolution by factor 4) and then
+expanding it back to its original size (factor 4) this way I obtain a lower resolution image.
+I also chose the order=0 (a parameter of zoom) to ensure that I get the weakest resolution.

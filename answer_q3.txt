@@ -1,1 +1,4 @@
-when we use more res blocks the performance becomes better and error calculation gets lower
+when we use more res blocks the performance becomes better and MSE gets lower.
+so a model with greater number of res blocks seems to perform better than a model with less res blocks.
+MSE tends to decrease as the number of epochs increase. 
+both the increased number of epochs and the res blocks yield better performance of the model overall.
