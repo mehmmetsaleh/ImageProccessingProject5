@@ -1,0 +1,1 @@
+I used scipy.ndimage.zoom to with order=0 (nearest interpolation) to scale down the image and then I scaled it back up using the same function
