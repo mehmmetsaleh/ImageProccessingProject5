@@ -347,7 +347,6 @@ def train_model(model, images, corruption_func, batch_size, steps_per_epoch, num
 
     crop_size = model.input_shape[1:3]
     train_set_size = int(len(images) * 0.8)
-    print("number of images: " + str(len(images)))
     train_images = images[:train_set_size]
     valid_images = images[train_set_size:]
     train_generator = load_dataset(train_images, batch_size, corruption_func, crop_size)
