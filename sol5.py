@@ -218,31 +218,31 @@ def read_image(filename, representation):
 
 ########## Download datasets ##########
 
-!mkdir
-current
-# %cd current
-!wget - -load - cookies / tmp / cookies.txt
-"https://www.cs.huji.ac.il/~impr/datasets.tar" - O
-datasets.tar & & rm - rf / tmp / cookies.txt
-!tar - xvf
-datasets.tar
-!unzip
-image_dataset.zip
-!unzip
-text_dataset.zip
-!rm - f
-datasets.tar
-!rm - f
-image_dataset.zip
-!rm - f
-text_dataset.zip
-# %cd ..
-!wget - -load - cookies / tmp / cookies.txt
-"https://www.cs.huji.ac.il/~impr/requirements.txt" - O
-requirements.txt & & rm - rf / tmp / cookies.txt
-!pip
-install - r
-requirements.txt
+# !mkdir
+# current
+# # %cd current
+# !wget - -load - cookies / tmp / cookies.txt
+# "https://www.cs.huji.ac.il/~impr/datasets.tar" - O
+# datasets.tar & & rm - rf / tmp / cookies.txt
+# !tar - xvf
+# datasets.tar
+# !unzip
+# image_dataset.zip
+# !unzip
+# text_dataset.zip
+# !rm - f
+# datasets.tar
+# !rm - f
+# image_dataset.zip
+# !rm - f
+# text_dataset.zip
+# # %cd ..
+# !wget - -load - cookies / tmp / cookies.txt
+# "https://www.cs.huji.ac.il/~impr/requirements.txt" - O
+# requirements.txt & & rm - rf / tmp / cookies.txt
+# !pip
+# install - r
+# requirements.txt
 
 ########## End of download datasets ##########
 
@@ -671,6 +671,6 @@ Submit your exercise via git and ensure that the presubmission script passes suc
 # @markdown Playing this cell will create a zip file with your username on it and downloads it.
 
 # @markdown Download your answers and outputs and add them to your git project.
-!zip
-{cs_id}.zip *.png
-answer *.txt
+# !zip
+# {cs_id}.zip *.png
+# answer *.txt
